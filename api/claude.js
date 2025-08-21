@@ -3,26 +3,18 @@
 import { clerkClient } from '@clerk/backend';
 
 // --------- CORS CONFIG ----------
-// FIXED CORS FUNCTION
-  function applyCors(req, res) {
-    const origin = req.headers.origin;
-
-    // Allow your specific frontend domain
-    if (origin === 'https://atticuschat.space' || origin === 'https://www.atticuschat.space') {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    } else {
-      // For development/testing
-      res.setHeader('Access-Control-Allow-Origin', '*');
-    }
-
-    res.setHeader('Vary', 'Origin');
+function applyCors(req, res) {
+    // Set CORS headers FIRST
+    res.setHeader('Access-Control-Allow-Origin', 'https://atticuschat.space');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, x-user-tier');
     res.setHeader('Access-Control-Max-Age', '86400');
+    res.setHeader('Vary', 'Origin');
 
+    // Handle preflight OPTIONS request immediately
     if (req.method === 'OPTIONS') {
-      res.statusCode = 204;
+      res.statusCode = 200;  // Changed from 204 to 200
       res.end();
       return true;
     }

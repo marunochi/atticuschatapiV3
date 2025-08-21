@@ -1,25 +1,25 @@
 // /api/claude.js - Secure API with Clerk Authentication
 
-import { clerkClient } from '@clerk/backend';
+import { createClerkClient } from '@clerk/backend';
+
+// Initialize Clerk client with secret key
+const clerkClient = createClerkClient({
+  secretKey: process.env.CLERK_SECRET_KEY,
+});
 
 // --------- CORS CONFIG ----------
-function applyCors(req, res) {
-    // Set CORS headers FIRST
-    res.setHeader('Access-Control-Allow-Origin', 'https://atticuschat.space');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, x-user-tier');
-    res.setHeader('Access-Control-Max-Age', '86400');
-    res.setHeader('Vary', 'Origin');
-
-    // Handle preflight OPTIONS request immediately
-    if (req.method === 'OPTIONS') {
-      res.statusCode = 200;  // Changed from 204 to 200
-      res.end();
-      return true;
-    }
-    return false;
-  }
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5175',
+  'http://127.0.0.1:5175',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+  'https://atticuschat.space',
+  'https://www.atticuschat.space',
+];
+const ALLOW_VERCEL_PREVIEWS = true;  // allow https://*.vercel.app
+const FALLBACK_TO_WILDCARD_IF_ORIGIN_NULL = true; // fixes "Origin null" cases
 
 // --------- USER TIER CONFIG ----------
 const TIER_CONFIG = {

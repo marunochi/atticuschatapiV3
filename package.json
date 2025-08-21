@@ -1,8 +1,8 @@
-{
+  {
     "name": "atticus-chat-api",
     "version": "1.0.0",
     "type": "module",
     "dependencies": {
-      "@clerk/backend": "^0.38.0"
+      "@clerk/backend": "^1.0.0"
     }
   }

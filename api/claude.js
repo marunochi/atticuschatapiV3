@@ -8,6 +8,7 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5174',
   'http://127.0.0.1:3000',
   'https://atticuschat.space',
+  'https://www.atticuschat.space',
 ];
 const ALLOW_VERCEL_PREVIEWS = true;  // allow https://*.vercel.app
 const FALLBACK_TO_WILDCARD_IF_ORIGIN_NULL = true; // fixes "Origin null" cases

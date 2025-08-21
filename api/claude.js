@@ -4,12 +4,16 @@ import { clerkClient } from '@clerk/nextjs';
 
 // --------- CORS CONFIG ----------
 const ALLOWED_ORIGINS = [
-  'http://localhost:3000',
-  'http://localhost:5174',
-  'http://127.0.0.1:3000',
-  'https://atticuschat.space',
-  'https://www.atticuschat.space',
-];
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5175',
+    'http://127.0.0.1:5175',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+    'https://atticuschat.space',
+    'https://www.atticuschat.space',  // Add this
+    '*'  // Temporary fix - allows all origins
+  ];
 const ALLOW_VERCEL_PREVIEWS = true;  // allow https://*.vercel.app
 const FALLBACK_TO_WILDCARD_IF_ORIGIN_NULL = true; // fixes "Origin null" cases
 

@@ -3,18 +3,31 @@
 import { clerkClient } from '@clerk/backend';
 
 // --------- CORS CONFIG ----------
-const ALLOWED_ORIGINS = [
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-  'http://localhost:5175',
-  'http://127.0.0.1:5175',
-  'http://localhost:5174',
-  'http://127.0.0.1:5174',
-  'https://atticuschat.space',
-  'https://www.atticuschat.space',
-];
-const ALLOW_VERCEL_PREVIEWS = true;  // allow https://*.vercel.app
-const FALLBACK_TO_WILDCARD_IF_ORIGIN_NULL = true; // fixes "Origin null" cases
+// FIXED CORS FUNCTION
+  function applyCors(req, res) {
+    const origin = req.headers.origin;
+
+    // Allow your specific frontend domain
+    if (origin === 'https://atticuschat.space' || origin === 'https://www.atticuschat.space') {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    } else {
+      // For development/testing
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, x-user-tier');
+    res.setHeader('Access-Control-Max-Age', '86400');
+
+    if (req.method === 'OPTIONS') {
+      res.statusCode = 204;
+      res.end();
+      return true;
+    }
+    return false;
+  }
 
 // --------- USER TIER CONFIG ----------
 const TIER_CONFIG = {

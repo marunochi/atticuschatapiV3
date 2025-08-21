@@ -1,10 +1,11 @@
 // /api/claude.js - Secure API with Clerk Authentication
 
-import { clerkClient } from '@clerk/backend';
+import { clerkClient } from '@clerk/nextjs';
 
 // --------- CORS CONFIG ----------
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
+  'http://localhost:5174',
   'http://127.0.0.1:3000',
   'https://atticuschat.space',
 ];

@@ -1,19 +1,18 @@
 // /api/claude.js - Secure API with Clerk Authentication
 
-import { clerkClient } from '@clerk/nextjs';
+import { clerkClient } from '@clerk/backend';
 
 // --------- CORS CONFIG ----------
 const ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:5175',
-    'http://127.0.0.1:5175',
-    'http://localhost:5174',
-    'http://127.0.0.1:5174',
-    'https://atticuschat.space',
-    'https://www.atticuschat.space',  // Add this
-    '*'  // Temporary fix - allows all origins
-  ];
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5175',
+  'http://127.0.0.1:5175',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+  'https://atticuschat.space',
+  'https://www.atticuschat.space',
+];
 const ALLOW_VERCEL_PREVIEWS = true;  // allow https://*.vercel.app
 const FALLBACK_TO_WILDCARD_IF_ORIGIN_NULL = true; // fixes "Origin null" cases
 
@@ -35,37 +34,19 @@ function originIsAllowed(origin = '') {
   return false;
 }
 
+// FIXED CORS FUNCTION
 function applyCors(req, res) {
-  const origin = req.headers.origin;
-  const isAllowed = originIsAllowed(origin);
-
-  // Access-Control-Allow-Origin
-  if (origin && isAllowed) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (!origin && FALLBACK_TO_WILDCARD_IF_ORIGIN_NULL) {
-    // e.g. file:// or certain preview tools
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  } else {
-    // Optionally block unknown origins by omitting the header.
-    // For now we stay permissive to avoid 204-without-ACAO issues:
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-
+  // Always allow all origins for now
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Vary', 'Origin');
-
-  // Updated headers for Clerk authentication
-  const requestedHeaders =
-    req.headers['access-control-request-headers'] || 
-    'Content-Type, Authorization, x-user-id, x-user-tier';
-
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', requestedHeaders);
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, x-user-tier');
   res.setHeader('Access-Control-Max-Age', '86400');
 
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
     res.end();
-    return true; // handled
+    return true;
   }
   return false;
 }
@@ -80,22 +61,64 @@ async function authenticateUser(req) {
 
     const token = authHeader.slice(7); // Remove 'Bearer ' prefix
     
-    // Verify the Clerk session token
-    const sessionId = token;
-    const session = await clerkClient.sessions.getSession(sessionId);
+    let user, session;
     
-    if (!session) {
-      return { error: 'Invalid session', status: 401 };
+    try {
+      // Try 1: Direct session ID verification
+      session = await clerkClient.sessions.getSession(token);
+      if (session) {
+        user = await clerkClient.users.getUser(session.userId);
+      }
+    } catch (sessionError) {
+      console.log('Session verification failed, trying JWT verification:', sessionError.message);
+      
+      try {
+        // Try 2: JWT token verification
+        const verifiedToken = await clerkClient.verifyToken(token);
+        if (verifiedToken && verifiedToken.sub) {
+          user = await clerkClient.users.getUser(verifiedToken.sub);
+        }
+      } catch (jwtError) {
+        console.log('JWT verification failed, trying fallback:', jwtError.message);
+        
+        // Try 3: Base64 encoded fallback (email:userID)
+        try {
+          // Check if token looks like base64 (no colons in raw token)
+          if (!token.includes(':') && token.length > 20) {
+            try {
+              const decoded = Buffer.from(token, 'base64').toString('utf-8');
+              if (decoded.includes(':')) {
+                const [email, userId] = decoded.split(':');
+                if (email && userId) {
+                  user = await clerkClient.users.getUser(userId);
+                  // Verify email matches
+                  if (user.primaryEmailAddress?.emailAddress !== email) {
+                    throw new Error('Email mismatch');
+                  }
+                }
+              }
+            } catch (base64Error) {
+              // Not valid base64, try direct user ID
+              user = await clerkClient.users.getUser(token);
+            }
+          } else {
+            // Try 4: Direct user ID lookup
+            user = await clerkClient.users.getUser(token);
+          }
+        } catch (fallbackError) {
+          console.log('Fallback authentication failed:', fallbackError.message);
+        }
+      }
     }
-
-    // Get user info
-    const user = await clerkClient.users.getUser(session.userId);
+    
     if (!user) {
-      return { error: 'User not found', status: 401 };
+      return { error: 'Invalid authentication token', status: 401 };
     }
 
     // Determine user tier
     const userTier = getUserTier(user);
+    
+    console.log(`User authenticated: ${user.firstName} (${user.id}) - Tier: ${userTier}`);
     
     return { 
       user, 
@@ -205,8 +228,8 @@ PROFIL UTILISATEUR (résumé JSON à utiliser pour personnaliser sans le répét
 ${json}
 
 Consignes de personnalisation :
-- Adapter systématiquement recommandations au profil (objectifs, tolérance au risque, horizon, capacité d’épargne).
-- Ne pas réimprimer le JSON brut ; intégrer l’info naturellement dans la réponse.
+- Adapter systématiquement recommandations au profil (objectifs, tolérance au risque, horizon, capacité d'épargne).
+- Ne pas réimprimer le JSON brut ; intégrer l'info naturellement dans la réponse.
 - Privilégier le droit/fiscalité FR et rappeler limites si info manquante/incertaine.
 ---`;
   return `${baseSystem}\n${block}`;
